@@ -9,7 +9,7 @@
     "dev": "nodemon --exec tsx index.js",
     "build": "prisma generate",
     "prestart": "prisma generate",
-    "start": "tsx index.js",
+    "start": "node index.js",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:reset": "docker compose down -v && docker compose up -d",
