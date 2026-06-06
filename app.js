@@ -6,6 +6,9 @@ import { prisma } from './lib/prisma.js';
 
 export const app = express();
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+const isProduction = process.env.NODE_ENV === 'production';
+
+app.set('trust proxy', 1);
 
 function toSessionUser(user) {
     return {
@@ -133,7 +136,11 @@ app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: process.env.NODE_ENV === 'production', maxAge: 30 * 24 * 60 * 60 * 1000 }
+    cookie: {
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+    },
 }));
 
 // User authentication routes
