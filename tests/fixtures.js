@@ -13,6 +13,8 @@ export const mockResource = {
     url: 'https://example.com',
     category: ['JOB_SEARCH'],
     userId: null,
+    createdAt: '2026-06-01T12:00:00.000Z',
+    updatedAt: '2026-06-01T12:00:00.000Z',
     votes: [],
 };
 

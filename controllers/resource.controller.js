@@ -110,6 +110,7 @@ export async function listResources(req, res) {
         const resources = await prisma.resource.findMany({
             where,
             include: resourceWithVotesInclude,
+            orderBy: { createdAt: 'desc' },
         });
         res.json(resources.map((resource) => formatResourceWithVotes(resource, userId)));
     } catch (error) {

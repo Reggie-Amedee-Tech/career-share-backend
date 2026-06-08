@@ -102,6 +102,7 @@ describe('Resource routes', () => {
                         select: { userId: true, upVote: true, downVote: true },
                     },
                 },
+                orderBy: { createdAt: 'desc' },
             });
         });
 
