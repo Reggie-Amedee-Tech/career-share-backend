@@ -17,8 +17,32 @@ model User {
   lName String
   email String @unique
   password String
+  addressLine1 String
+  city String
+  state String
+  zipCode String
+  country String
+  location String
+  latitude Float
+  longitude Float
+  countryShortName String
   resources Resource[]
   votes Vote[]
+  professionalJourneys ProfessionalJourney[]
+}
+
+model ProfessionalJourney {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name String
+  targetJobTitle String
+  targetJobLocation String
+  chartConfig Json @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model Resource {
@@ -52,3 +76,4 @@ enum Category {
   INTERNSHIPS
   OTHER
 }
+

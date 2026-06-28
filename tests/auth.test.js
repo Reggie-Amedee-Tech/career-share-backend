@@ -3,7 +3,20 @@ import request from 'supertest';
 import bcrypt from 'bcryptjs';
 import { app } from '../app.js';
 import { prisma } from '../lib/prisma.js';
+import { geocodeAddress } from '../utils/geocode.js';
 import { mockUser } from './fixtures.js';
+
+const signupPayload = {
+    fName: 'Jane',
+    lName: 'Doe',
+    email: 'jane@example.com',
+    password: 'secret123',
+    addressLine1: '123 Main St',
+    city: 'New York',
+    state: 'NY',
+    zipCode: '10001',
+    country: 'United States',
+};
 
 describe('Auth routes', () => {
     beforeEach(() => {
@@ -25,21 +38,13 @@ describe('Auth routes', () => {
 
             const res = await request(app)
                 .post('/api/users')
-                .send({
-                    fName: 'Jane',
-                    lName: 'Doe',
-                    email: 'jane@example.com',
-                    password: 'secret123',
-                });
+                .send(signupPayload);
 
             expect(res.status).toBe(409);
             expect(res.body.message).toBe('Email already in use');
         });
 
-        it('creates a user and sets session on success', async () => {
-            vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
-            vi.mocked(prisma.user.create).mockResolvedValue(mockUser);
-
+        it('returns 400 when address fields are missing', async () => {
             const res = await request(app)
                 .post('/api/users')
                 .send({
@@ -49,6 +54,32 @@ describe('Auth routes', () => {
                     password: 'secret123',
                 });
 
+            expect(res.status).toBe(400);
+            expect(res.body.message).toBe('All address fields are required');
+        });
+
+        it('returns 400 when address cannot be verified', async () => {
+            vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
+            vi.mocked(geocodeAddress).mockRejectedValueOnce(
+                new Error('Address could not be verified'),
+            );
+
+            const res = await request(app)
+                .post('/api/users')
+                .send(signupPayload);
+
+            expect(res.status).toBe(400);
+            expect(res.body.message).toBe('Address could not be verified');
+        });
+
+        it('creates a user and sets session on success', async () => {
+            vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
+            vi.mocked(prisma.user.create).mockResolvedValue(mockUser);
+
+            const res = await request(app)
+                .post('/api/users')
+                .send(signupPayload);
+
             expect(res.status).toBe(201);
             expect(res.body.message).toBe('Account created');
             expect(res.body.user).toEqual({
@@ -56,6 +87,15 @@ describe('Auth routes', () => {
                 fName: mockUser.fName,
                 lName: mockUser.lName,
                 email: mockUser.email,
+                addressLine1: mockUser.addressLine1,
+                city: mockUser.city,
+                state: mockUser.state,
+                zipCode: mockUser.zipCode,
+                country: mockUser.country,
+                location: mockUser.location,
+                latitude: mockUser.latitude,
+                longitude: mockUser.longitude,
+                countryShortName: mockUser.countryShortName,
             });
             expect(bcrypt.hash).toHaveBeenCalledWith('secret123', 10);
             expect(prisma.user.create).toHaveBeenCalledWith({
@@ -64,6 +104,15 @@ describe('Auth routes', () => {
                     lName: 'Doe',
                     email: 'jane@example.com',
                     password: 'hashed-password',
+                    addressLine1: '123 Main St',
+                    city: 'New York',
+                    state: 'NY',
+                    zipCode: '10001',
+                    country: 'United States',
+                    location: mockUser.location,
+                    latitude: mockUser.latitude,
+                    longitude: mockUser.longitude,
+                    countryShortName: mockUser.countryShortName,
                 },
             });
         });

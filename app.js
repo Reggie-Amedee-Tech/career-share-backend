@@ -3,6 +3,8 @@ import session from 'express-session';
 import bodyParser from 'body-parser';
 import userRoutes from './routes/user.routes.js';
 import resourceRoutes from './routes/resource.routes.js';
+import jobRoutes from './routes/job.routes.js';
+import journeyRoutes from './routes/journey.routes.js';
 
 export const app = express();
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -37,3 +39,5 @@ app.use(session({
 
 app.use(userRoutes);
 app.use(resourceRoutes);
+app.use(jobRoutes);
+app.use(journeyRoutes);

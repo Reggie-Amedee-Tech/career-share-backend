@@ -4,6 +4,26 @@ export const mockUser = {
     lName: 'Doe',
     email: 'jane@example.com',
     password: 'hashed-password',
+    addressLine1: '123 Main St',
+    city: 'New York',
+    state: 'NY',
+    zipCode: '10001',
+    country: 'United States',
+    location: '123 Main St, New York, NY 10001, United States',
+    latitude: 40.7484,
+    longitude: -73.9967,
+    countryShortName: 'US',
+};
+
+export const mockJourney = {
+    id: 'journey-1',
+    userId: mockUser.id,
+    name: 'Frontend Developer',
+    targetJobTitle: 'frontend-engineer',
+    targetJobLocation: 'New York, NY',
+    chartConfig: { topSkillsLimit: 10, topLocationsLimit: 6 },
+    createdAt: new Date('2026-06-01T12:00:00.000Z'),
+    updatedAt: new Date('2026-06-01T12:00:00.000Z'),
 };
 
 export const mockResource = {

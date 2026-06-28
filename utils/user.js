@@ -4,6 +4,15 @@ export function toSessionUser(user) {
         fName: user.fName,
         lName: user.lName,
         email: user.email,
+        addressLine1: user.addressLine1,
+        city: user.city,
+        state: user.state,
+        zipCode: user.zipCode,
+        country: user.country,
+        location: user.location,
+        latitude: user.latitude,
+        longitude: user.longitude,
+        countryShortName: user.countryShortName,
     };
 }
 

@@ -1,14 +1,37 @@
 import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/prisma.js';
 import { handleApiError, logApiError } from '../utils/errors.js';
+import { formatAddress, validateAddressInput } from '../utils/address.js';
+import { geocodeAddress } from '../utils/geocode.js';
 import { toSessionUser } from '../utils/user.js';
 
 export async function register(req, res) {
     try {
-        const { fName, lName, email, password } = req.body;
+        const {
+            fName,
+            lName,
+            email,
+            password,
+            addressLine1,
+            city,
+            state,
+            zipCode,
+            country,
+        } = req.body;
 
         if (!fName || !lName || !email || !password) {
             return res.status(400).json({ message: 'All fields are required' });
+        }
+
+        const addressError = validateAddressInput({
+            addressLine1,
+            city,
+            state,
+            zipCode,
+            country,
+        });
+        if (addressError) {
+            return res.status(400).json({ message: addressError });
         }
 
         const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -16,9 +39,40 @@ export async function register(req, res) {
             return res.status(409).json({ message: 'Email already in use' });
         }
 
+        const formattedAddress = formatAddress({
+            addressLine1,
+            city,
+            state,
+            zipCode,
+            country,
+        });
+
+        let geocodedAddress;
+        try {
+            geocodedAddress = await geocodeAddress(formattedAddress);
+        } catch (error) {
+            return res.status(400).json({
+                message: error.message || 'Address could not be verified',
+            });
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
         const user = await prisma.user.create({
-            data: { fName, lName, email, password: hashedPassword },
+            data: {
+                fName,
+                lName,
+                email,
+                password: hashedPassword,
+                addressLine1: addressLine1.trim(),
+                city: city.trim(),
+                state: state.trim(),
+                zipCode: zipCode.trim(),
+                country: country.trim(),
+                location: geocodedAddress.location,
+                latitude: geocodedAddress.latitude,
+                longitude: geocodedAddress.longitude,
+                countryShortName: geocodedAddress.countryShortName,
+            },
         });
 
         req.session.user = toSessionUser(user);
