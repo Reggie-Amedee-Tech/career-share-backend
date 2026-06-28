@@ -1,5 +1,5 @@
 import { prisma } from '../lib/prisma.js';
-import { fetchJobsFromBoards, getBoardTokens } from '../utils/greenhouse.js';
+import { fetchJobsFromBoards, getBoardTokens, enrichJobsWithDescriptions } from '../utils/greenhouse.js';
 import { analyzeJobSkills } from '../utils/jobSkills.js';
 import {
     buildJobLocationPoints,
@@ -200,7 +200,9 @@ export async function getJourneySkillInsights(req, res) {
         const chartConfig = parseChartConfig(journey.chartConfig);
         const role = resolveJourneyRole(journey.targetJobTitle);
 
-        const jobs = await fetchJobsFromBoards(boardTokens);
+        const jobs = await fetchJobsFromBoards(boardTokens, {
+            includeContent: false,
+        });
         const {
             jobs: matchedJobs,
             exactTitleMatches,
@@ -220,6 +222,8 @@ export async function getJourneySkillInsights(req, res) {
             role?.id ?? journey.targetJobTitle,
             journey.targetJobLocation,
         );
+
+        await enrichJobsWithDescriptions(matchedJobs);
 
         const insights = analyzeJobSkills(matchedJobs, chartConfig);
         const [skillHeatmap, jobLocations] = await Promise.all([

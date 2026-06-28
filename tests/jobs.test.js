@@ -3,7 +3,12 @@ import request from 'supertest';
 import bcrypt from 'bcryptjs';
 import { app } from '../app.js';
 import { prisma } from '../lib/prisma.js';
-import { fetchJobsFromBoards, getBoardTokens } from '../utils/greenhouse.js';
+import {
+    fetchFilteredJobsFromBoards,
+    fetchJobDetail,
+    fetchJobsFromBoards,
+    getBoardTokens,
+} from '../utils/greenhouse.js';
 import { mockUser } from './fixtures.js';
 
 const mockJobs = [
@@ -45,6 +50,8 @@ const mockJobs = [
 vi.mock('../utils/greenhouse.js', () => ({
     getBoardTokens: vi.fn(),
     fetchJobsFromBoards: vi.fn(),
+    fetchFilteredJobsFromBoards: vi.fn(),
+    fetchJobDetail: vi.fn(),
 }));
 
 describe('Job routes', () => {
@@ -52,6 +59,13 @@ describe('Job routes', () => {
         vi.clearAllMocks();
         vi.mocked(getBoardTokens).mockReturnValue(['stripe', 'figma', 'airbnb']);
         vi.mocked(fetchJobsFromBoards).mockResolvedValue(mockJobs);
+        vi.mocked(fetchFilteredJobsFromBoards).mockImplementation(
+            async (_boardTokens, predicate) => mockJobs.filter(predicate),
+        );
+        vi.mocked(fetchJobDetail).mockResolvedValue({
+            ...mockJobs[0],
+            descriptionHtml: '<p>Experience with Python and distributed systems.</p>',
+        });
     });
 
     async function loginAgent() {
@@ -103,11 +117,10 @@ describe('Job routes', () => {
                 location: '',
                 radiusMiles: null,
             });
-            expect(fetchJobsFromBoards).toHaveBeenCalledWith([
-                'stripe',
-                'figma',
-                'airbnb',
-            ]);
+            expect(fetchJobsFromBoards).toHaveBeenCalledWith(
+                ['stripe', 'figma', 'airbnb'],
+                { includeContent: false },
+            );
         });
 
         it('filters jobs by search keywords', async () => {
@@ -119,6 +132,7 @@ describe('Job routes', () => {
             expect(res.body.jobs).toHaveLength(1);
             expect(res.body.jobs[0].title).toBe('Product Designer');
             expect(res.body.filters.search).toBe('designer');
+            expect(fetchFilteredJobsFromBoards).toHaveBeenCalled();
         });
 
         it('filters jobs by required skills in the description', async () => {
@@ -236,6 +250,24 @@ describe('Job routes', () => {
             expect(res.status).toBe(200);
             expect(res.body.page).toBe(2);
             expect(res.body.jobs).toHaveLength(1);
+        });
+    });
+
+    describe('GET /api/jobs/:boardToken/:jobId', () => {
+        it('returns 401 when not authenticated', async () => {
+            const res = await request(app).get('/api/jobs/stripe/1');
+
+            expect(res.status).toBe(401);
+        });
+
+        it('returns a single job with html content', async () => {
+            const agent = await loginAgent();
+
+            const res = await agent.get('/api/jobs/stripe/1');
+
+            expect(res.status).toBe(200);
+            expect(res.body.job.title).toBe('Software Engineer');
+            expect(fetchJobDetail).toHaveBeenCalledWith('stripe', 1);
         });
     });
 });
