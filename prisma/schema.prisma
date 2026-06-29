@@ -77,3 +77,12 @@ enum Category {
   OTHER
 }
 
+model GeocodeCache {
+  locationKey String @id
+  location String
+  latitude Float
+  longitude Float
+  countryShortName String @default("US")
+  updatedAt DateTime @updatedAt
+}
+

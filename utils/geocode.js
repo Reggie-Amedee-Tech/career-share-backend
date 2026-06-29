@@ -3,6 +3,7 @@ import {
     getCachedGeocode,
     setCachedGeocode,
 } from './geocodeCache.js';
+import { lookupUsCityCoordinates } from './usCityCoordinates.js';
 
 const NOMINATIM_MIN_INTERVAL_MS = 1100;
 export const DEFAULT_MAX_GEOCODE_LOOKUPS = 15;
@@ -96,6 +97,12 @@ export async function geocodeLocation(location) {
         return cached;
     }
 
+    const staticMatch = lookupUsCityCoordinates(normalized);
+    if (staticMatch) {
+        await setCachedGeocode(normalized, staticMatch);
+        return staticMatch;
+    }
+
     const cacheKey = normalized.toLowerCase();
     if (inflightRequests.has(cacheKey)) {
         return inflightRequests.get(cacheKey);
@@ -126,6 +133,13 @@ export async function geocodeLocations(locations, options = {}) {
         const cached = await getCachedGeocode(normalized);
         if (cached) {
             coordinatesByLocation.set(normalized, cached);
+            continue;
+        }
+
+        const staticMatch = lookupUsCityCoordinates(normalized);
+        if (staticMatch) {
+            await setCachedGeocode(normalized, staticMatch);
+            coordinatesByLocation.set(normalized, staticMatch);
             continue;
         }
 
@@ -162,7 +176,18 @@ export function warmGeocodeCache() {
 }
 
 export async function geocodeAddress(location) {
-    const result = await fetchGeocodeResult(location);
-    await setCachedGeocode(location.trim(), result);
+    const normalized = location?.trim();
+    if (!normalized) {
+        throw new Error('Address could not be verified');
+    }
+
+    const staticMatch = lookupUsCityCoordinates(normalized);
+    if (staticMatch) {
+        await setCachedGeocode(normalized, staticMatch);
+        return staticMatch;
+    }
+
+    const result = await fetchGeocodeResult(normalized);
+    await setCachedGeocode(normalized, result);
     return result;
 }
